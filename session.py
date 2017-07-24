@@ -21,23 +21,32 @@ class SessionData(dict):
 #	def sid(self, value):
 #		self.session_id = value
 
-class Session(SessionData):
-	def __init__(self, session_manager, request_handler):
+# 继承 SessionData 类   
+class Session(SessionData):   
+	# 初始化，绑定 session_manager 和 tornado 的对应 handler   
+	def __init__(self, session_manager, request_handler):   
+		self.session_manager = session_manager   
+		self.request_handler = request_handler   
+		try:   
+		# 正常是获取该 session 的所有数据，以 SessionData 的形式保存   
+		current_session = session_manager.get(request_handler)   
+		except InvalidSessionException:   
+		# 如果是第一次访问会抛出异常，异常的时候是获取了一个空的 SessionData 对象,里面没有数据，但包含新生成的   
+		# session_id 和 hmac_key   
+		current_session = session_manager.get()   
 
-		self.session_manager = session_manager
-		self.request_handler = request_handler
+		# 取出 current_session 中的数据，以键值对的形式迭代存下   
+		for key, data in current_session.iteritems():   
+		self[key] = data   
 
-		try:
-			current_session = session_manager.get(request_handler)
-		except InvalidSessionException:
-			current_session = session_manager.get()
-		for key, data in current_session.iteritems():
-			self[key] = data
-		self.session_id = current_session.session_id
-		self.hmac_key = current_session.hmac_key
-	
-	def save(self):
-		self.session_manager.set(self.request_handler, self)
+		# 保存下 session_id   
+		self.session_id = current_session.session_id   
+		# 以及对应的 hmac_key   
+		self.hmac_key = current_session.hmac_key   
+
+	# 定义 save 方法，用于 session 修改后的保存，实际调用 session_manager 的 set 方法   
+	def save(self):   
+		self.session_manager.set(self.request_handler, self)  
 
 
 class SessionManager(object):
